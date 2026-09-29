@@ -37,7 +37,7 @@ const {useState}=React; const html=htm.bind(React.createElement);
 const PS=['Чака детайли','В сглобяване в цеха','Готов за транспорт','В процес на монтаж','Завършен'];
 const FS=['Чака детайли','Детайли проверени','Сглобен в цеха','Качен в буса','Монтиран'];
 // ===== НАСТРОЙКИ: залепи данните от Supabase (Project Settings → API) =====
-const SUPABASE_URL='PASTE_PROJECT_URL',SUPABASE_KEY='PASTE_ANON_PUBLIC_KEY';
+const SUPABASE_URL='https://rzhwwwwktsmvhbrithcv.supabase.co',SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6aHd3d3drdHNtdmhicml0aGN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA2ODI2ODQsImV4cCI6MjEwNjI1ODY4NH0.j66pJThOy6FVkuPI6sZUKrHODO3P2_fRN7qmCSqirno';
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);const CID=Math.random().toString(36).slice(2);
 const KINDS=['Бележка','Проблем','Липсва материал','За клиента'];
 const TPL={'Долен шкаф':{d:[600,720,560],b:(w,h,d)=>({parts:[['Страница лява',h,d],['Страница дясна',h,d],['Дъно',w-36,d],['Траверса преден',w-36,100],['Траверса заден',w-36,100],['Гръб 3 мм',w-4,h-4],['Лице (врата)',h-4,w-4]],hw:[['Панти Blum Clip Top 110°',2],['Крачета PVC',4],['Дибли 8x30',16],['Дръжка',1]]})},
