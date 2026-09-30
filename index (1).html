@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Монтажи – управление на обекти</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@600;700&display=swap">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/htm@3.1.1/dist/htm.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<style>
+:root{--bg:#ecefea;--card:#fff;--ink:#1c2a2e;--mut:#5d6b6f;--line:#d5dbd6;--pri:#0f5c63;--onpri:#fff;--acc:#e3b23c;--ok:#2f8a4b;--bad:#c23b32;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141b1d;--card:#1e282b;--ink:#e6ecec;--mut:#93a3a6;--line:#33423f;--pri:#4fb3bb;--onpri:#0b1a1c;--acc:#e3b23c;--ok:#5cc47a;--bad:#ef7a70}}
+:root[data-theme="dark"]{--bg:#141b1d;--card:#1e282b;--ink:#e6ecec;--mut:#93a3a6;--line:#33423f;--pri:#4fb3bb;--onpri:#0b1a1c;--acc:#e3b23c;--ok:#5cc47a;--bad:#ef7a70}
+body{background:var(--bg);color:var(--ink);font-family:'Barlow',system-ui,sans-serif;margin:0}
+h1,h2,h3,.hd{font-family:'Barlow Semi Condensed','Barlow',system-ui,sans-serif;font-weight:700}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px}
+.btn{min-height:48px;padding:0 16px;border-radius:8px;font-weight:600;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+.pri{background:var(--pri);color:var(--onpri);border-color:var(--pri)}
+.inp{min-height:44px;border:1px solid var(--line);border-radius:8px;padding:0 10px;background:var(--bg);color:var(--ink);width:100%}
+.ck{width:44px;height:44px;flex:none;border-radius:8px;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;background:var(--card);color:var(--ink)}
+.ck.on{background:var(--ok);border-color:var(--ok);color:#fff}.ck.bad{background:var(--bad);border-color:var(--bad);color:#fff}
+.bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden}.bar>i{display:block;height:100%;background:var(--pri)}
+.chip{padding:0 12px;min-height:38px;border-radius:19px;border:1px solid var(--line);white-space:nowrap;background:var(--card);color:var(--ink);font-weight:500}
+.chip.on{background:var(--pri);color:var(--onpri);border-color:var(--pri)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--acc);outline-offset:1px}
+@media print{header,[data-f],.noprint{display:none!important}body{background:#fff}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="config.js"></script>
+<script>
+const {useState}=React; const html=htm.bind(React.createElement);
+const PS=['Чака детайли','В сглобяване в цеха','Готов за транспорт','В процес на монтаж','Завършен'];
+const FS=['Чака детайли','Детайли проверени','Сглобен в цеха','Качен в буса','Монтиран'];
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);const CID=Math.random().toString(36).slice(2);
+const KINDS=['Бележка','Проблем','Липсва материал','За клиента'];
+const TPL={'Долен шкаф':{d:[600,720,560],b:(w,h,d)=>({parts:[['Страница лява',h,d],['Страница дясна',h,d],['Дъно',w-36,d],['Траверса преден',w-36,100],['Траверса заден',w-36,100],['Гръб 3 мм',w-4,h-4],['Лице (врата)',h-4,w-4]],hw:[['Панти Blum Clip Top 110°',2],['Крачета PVC',4],['Дибли 8x30',16],['Дръжка',1]]})},
+'Шкаф с чекмеджета':{d:[600,720,560],b:(w,h,d)=>({parts:[['Страница лява',h,d],['Страница дясна',h,d],['Дъно',w-36,d],['Траверса преден',w-36,100],['Гръб 3 мм',w-4,h-4],['Лице чекмедже 1',(h-8)/3,w-4],['Лице чекмедже 2',(h-8)/3,w-4],['Лице чекмедже 3',(h-8)/3,w-4]],hw:[['Водачи Tandem 500 мм',3],['Дръжки',3],['Крачета PVC',4],['Дибли 8x30',16]]})},
+'Горен шкаф':{d:[600,720,320],b:(w,h,d)=>({parts:[['Страница лява',h,d],['Страница дясна',h,d],['Таван',w-36,d],['Дъно',w-36,d],['Рафт',w-40,d-20],['Гръб 3 мм',w-4,h-4],['Лице (врата)',h-4,w-4]],hw:[['Панти Blum Clip Top 110°',2],['Окачвачи',2],['Дибли 8x30',12],['Дръжка',1]]})},
+'Гардероб 2 врати':{d:[1000,2400,600],b:(w,h,d)=>({parts:[['Страница лява',h,d],['Страница дясна',h,d],['Таван',w-36,d],['Дъно',w-36,d],['Рафт',w-36,d-20],['Гръб 3 мм',w-4,h-4],['Врата 1',h-4,w/2-3],['Врата 2',h-4,w/2-3]],hw:[['Панти Blum Clip Top 110°',6],['Щанга овална',1],['Дибли 8x30',24],['Дръжки',2]]})}};
+const DCAT={rooms:['Кухня','Спалня','Хол','Антре','Коридор','Детска стая','Баня','Кабинет'],
+furn:['Долен шкаф','Шкаф мивка','Шкаф с чекмеджета','Горен шкаф','Колона','Гардероб','Скрин','Нощно шкафче','ТВ шкаф','Легло','Работен плот'],
+parts:['Страница лява','Страница дясна','Дъно','Таван','Рафт','Гръб','Врата','Лице чекмедже','Траверса преден','Траверса заден','Цокъл','Бленда','Плот'],
+mats:['ПДЧ 18 мм','ПДЧ 16 мм','МДФ 18 мм','МДФ 16 мм','ХДФ 3 мм','Плот 38 мм'],
+colors:['Бял мат','Дъб Сонома','Венге','Антрацит','Мрамор бял'],
+hw:['Панти Blum Clip Top 110°','Водачи Tandem 500 мм','Дибли 8x30','Крачета PVC','Дръжка','Окачвачи','Щанга овална','Силикон бял','Ъглови планки']};
+const LBL={rooms:'Стаи',furn:'Видове мебели',parts:'Детайли (страница, дъно, таван…)',mats:'Материали',colors:'Цветове и кантове',hw:'Обков и консумативи'};
+const Pick=({name,list,ph})=>html`<div className="grid grid-cols-2 gap-2"><select name=${name} className="inp"><option value="">${ph}</option>${list.map(x=>html`<option key=${x}>${x}</option>`)}</select><input name=${name+'_x'} className="inp" placeholder="или напиши друго"/></div>`;
+function CatScreen({cat,setCat,onBack}){
+const add=(k,e)=>{const i=e.target.closest('div[data-f]').querySelector('input');const v=i.value.trim();if(!v||cat[k].includes(v))return;setCat(o=>({...o,[k]:[...o[k],v]}));i.value=''};
+const del=(k,v)=>setCat(o=>({...o,[k]:o[k].filter(x=>x!==v)}));
+return html`<div><header className="sticky top-0 z-10 px-4 py-3 flex items-center gap-3" style=${{background:'var(--pri)',color:'var(--onpri)'}}><button className="hd text-2xl px-2" aria-label="Назад" onClick=${onBack}>‹</button><h1 className="text-xl flex-1">Каталог</h1></header>
+<main className="p-4 max-w-2xl mx-auto space-y-4"><p className="text-sm" style=${{color:'var(--mut)'}}>Тук добавяш нещата, които ползвате често. Те се появяват като падащи списъци при добавяне на стая, мебел, детайл и обков. Изтриването от каталога не променя вече въведените обекти.</p>
+${Object.keys(LBL).map(k=>html`<section key=${k} className="card p-4"><h2 className="text-lg mb-2">${LBL[k]} (${cat[k].length})</h2>
+<div className="flex flex-wrap gap-2 mb-3">${cat[k].map(v=>html`<span key=${v} className="chip flex items-center gap-1">${v}<button aria-label=${'Изтрий '+v} className="px-2 text-lg" onClick=${()=>del(k,v)}>×</button></span>`)}</div>
+<div data-f className="flex gap-2"><input className="inp" placeholder="Ново име…"/><button className="btn pri" onClick=${e=>add(k,e)}>+ Добави</button></div></section>`)}</main></div>`}
+let uid=100; let nc=0;const nid=()=>Date.now()*1000+(nc++%1000);
+const P=(n,l,w,c,s)=>({id:nid(),name:n,l,w,unit:'мм',color:c,st:s||'wait'});
+const H=(n,q,d,ld)=>({id:nid(),name:n,qty:q,done:!!d,loaded:!!ld});
+const seed=[{id:1,name:'Кухня и спалня – ап. Младост',phone:'0888 123 456',addr:'ж.к. Младост 1, бл. 45, вх. Б, ет. 4',date:'2026-10-03',status:1,
+notes:'Етаж 4, няма асансьор. Шумни работи само 9:00–13:00 и 16:00–19:00. Ключ при съседката от ап. 15.',
+days:[{id:801,date:'2026-09-25',note:'Замерване и уточняване с клиента'}],
+log:[{id:901,text:'Страница дясна на горния шкаф е с надраскан кант – да се върне на доставчика.',by:'Монтажник',date:'2026-09-28',furn:3,kind:'Проблем',done:false},{id:902,text:'Клиентът иска дръжките да са черни, не инокс.',by:'Админ',date:'2026-09-27',furn:0,kind:'За клиента',done:false}],
+rooms:[{id:1,name:'Кухня'},{id:2,name:'Спалня'}],
+furn:[
+{id:1,room:1,name:'Долен шкаф мивка 80 см',fs:1,parts:[P('Страница лява',720,560,'Дъб Сонома / бял кант','ok'),P('Страница дясна',720,560,'Дъб Сонома / бял кант','ok'),P('Дъно',764,540,'Дъб Сонома','ok'),P('Лице (бленда)',716,396,'Бял мат / бял кант','wait')],hw:[H('Панти Blum Clip Top 110°',2,1),H('Дибли 8x30',12,1),H('Крачета PVC',4,0)]},
+{id:2,name:'Долен шкаф с 3 чекмеджета 60 см',fs:2,room:1,parts:[P('Страница лява',720,560,'Дъб Сонома','ok'),P('Страница дясна',720,560,'Дъб Сонома','ok'),P('Дъно',564,540,'Дъб Сонома','ok')],hw:[H('Водачи Tandem 500 мм',3,1,0),H('Дръжки скоба 128 мм',3,1,0)]},
+{id:3,name:'Горен шкаф 80 см',room:1,fs:0,parts:[P('Страница лява',720,320,'Бял мат','wait'),P('Страница дясна',720,320,'Бял мат','bad'),P('Таван',764,300,'Бял мат','wait')],hw:[H('Панти Blum Clip Top 110°',2,0),H('Окачвачи',2,0)]},
+{id:4,name:'Работен плот 38 мм',room:1,fs:2,parts:[P('Плот (лява част)',2400,600,'Мрамор бял','ok')],hw:[H('Силикон бял',1,1),H('Ъглови планки',4,1)]},
+{id:5,name:'Гардероб 3 врати',room:2,fs:1,parts:[P('Страница лява',2400,600,'Венге','ok'),P('Страница дясна',2400,600,'Венге','ok'),P('Врата 1',2380,450,'Венге','wait'),P('Врата 2',2380,450,'Венге','wait'),P('Дъно',1364,580,'Венге','ok')],hw:[H('Панти Blum Clip Top 110°',6,1),H('Щанга овална',1,0),H('Дръжки',3,0)]}]},
+{id:2,name:'Баня – Иванова, Лозенец',phone:'0899 555 210',addr:'ул. Хубча 12, ет. 2',date:'2026-10-12',status:0,notes:'Асансьор има. Паркинг пред входа.',rooms:[{id:3,name:'Баня'}],furn:[]},
+{id:3,name:'Антре – Петров, Студентски',phone:'0877 400 300',addr:'Студентски град, бл. 20',date:'2026-09-20',status:4,notes:'Предаден без забележки.',rooms:[{id:4,name:'Антре'}],furn:[]}];
+
+const fp=f=>{const a=f.parts.length+f.hw.length;if(!a)return 0;return Math.round((f.parts.filter(p=>p.st==='ok').length+f.hw.filter(h=>h.done).length)/a*100)};
+const days=d=>Math.ceil((new Date(d)-new Date(new Date().toISOString().slice(0,10)))/864e5);
+const fmt=d=>new Date(d).toLocaleDateString('bg-BG',{day:'numeric',month:'long'});
+const dim=p=>p.l&&p.w?`${p.l} × ${p.w} ${p.unit}`:'—';
+const Bar=({v})=>html`<div class="bar"><i style=${{width:v+'%'}}></i></div>`;
+const Ck=({on,bad,f,dis,label})=>html`<button aria-label=${label} disabled=${dis} onClick=${f} className=${'ck '+(on?'on':bad?'bad':'')+(dis?' opacity-40':'')}>${on?'✓':bad?'✕':''}</button>`;
+
+function Lightbox({src,onClose}){
+const [t,setT]=useState({s:1,x:0,y:0});const g=React.useRef({});
+const cl=s=>Math.min(6,Math.max(1,s));
+const zs=(f,abs)=>setT(o=>{const s=cl(abs?f:o.s*f);return s===1?{s:1,x:0,y:0}:{...o,s}});
+const dist=e=>Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+const pan=(x,y)=>{const r=g.current;const dx=x-r.px,dy=y-r.py;r.px=x;r.py=y;setT(o=>({...o,x:o.x+dx,y:o.y+dy}))};
+const ts=e=>{const r=g.current;if(e.touches.length===2){r.d=dist(e);r.s0=t.s;r.moved=true}else{r.px=e.touches[0].clientX;r.py=e.touches[0].clientY;r.moved=false}};
+const tm=e=>{const r=g.current;if(e.touches.length===2&&r.d){zs(cl(r.s0*dist(e)/r.d),true)}else if(e.touches.length===1&&t.s>1){r.moved=true;pan(e.touches[0].clientX,e.touches[0].clientY)}};
+const te=e=>{const r=g.current;r.d=0;if(e.touches.length===1){r.px=e.touches[0].clientX;r.py=e.touches[0].clientY}if(e.touches.length===0&&!r.moved){const n=Date.now();if(n-(r.last||0)<300){zs(t.s>1?1:2.5,true);r.last=0}else r.last=n}};
+return html`<div className="noprint fixed inset-0 z-50 flex items-center justify-center" style=${{background:'rgba(0,0,0,.94)',touchAction:'none',overflow:'hidden'}} onClick=${e=>{if(e.target===e.currentTarget)onClose()}} onWheel=${e=>zs(e.deltaY<0?1.2:1/1.2)}>
+<img src=${src} alt="Снимка" draggable="false" onTouchStart=${ts} onTouchMove=${tm} onTouchEnd=${te} onDoubleClick=${()=>zs(t.s>1?1:2.5,true)}
+onMouseDown=${e=>{g.current.md=true;g.current.px=e.clientX;g.current.py=e.clientY}} onMouseMove=${e=>{if(g.current.md&&t.s>1)pan(e.clientX,e.clientY)}} onMouseUp=${()=>{g.current.md=false}} onMouseLeave=${()=>{g.current.md=false}}
+style=${{maxWidth:'100%',maxHeight:'100%',objectFit:'contain',transform:`translate(${t.x}px,${t.y}px) scale(${t.s})`,cursor:t.s>1?'grab':'zoom-in',userSelect:'none'}}/>
+<button aria-label="Затвори" className="absolute right-3 btn pri" style=${{top:'calc(env(safe-area-inset-top,0px) + 8px)'}} onClick=${onClose}>✕ Затвори</button>
+<div className="absolute left-1/2 flex gap-2 items-center" style=${{transform:'translateX(-50%)',bottom:'calc(env(safe-area-inset-bottom,0px) + 16px)'}}>
+<button aria-label="Намали" className="btn text-2xl" onClick=${()=>zs(1/1.5)}>−</button><button className="btn" style=${{minWidth:80}} onClick=${()=>zs(1,true)}>${Math.round(t.s*100)}%</button><button aria-label="Увеличи" className="btn text-2xl" onClick=${()=>zs(1.5)}>+</button></div></div>`}
+const fixIds=d=>{let ch=0;const u=a=>{const s=new Set();(a||[]).forEach(x=>{if(s.has(x.id)){x.id=nid();ch=1}s.add(x.id)})};u(d.projects);d.projects.forEach(p=>{u(p.rooms);u(p.furn);(p.furn||[]).forEach(f=>{u(f.parts);u(f.hw)});u(p.log);u(p.days)});return ch};
+const shrink=f=>new Promise(r=>{const i=new Image();i.onload=()=>{const k=Math.min(1,1600/Math.max(i.width,i.height));const c=document.createElement('canvas');c.width=i.width*k;c.height=i.height*k;c.getContext('2d').drawImage(i,0,0,c.width,c.height);c.toBlob(b=>r(b||f),'image/jpeg',0.82)};i.onerror=()=>r(f);i.src=URL.createObjectURL(f)});
+function Photo({path,open}){const [u,setU]=useState(null);React.useEffect(()=>{let ok=true;sb.storage.from('photos').createSignedUrl(path,3600).then(r=>{if(ok&&r.data)setU(r.data.signedUrl)});return()=>{ok=false}},[path]);
+return u?html`<button className="block mt-2 relative" aria-label="Увеличи снимката" onClick=${()=>open(u)}><img src=${u} alt="Снимка" className="rounded-lg" style=${{maxHeight:200,maxWidth:'100%'}}/><span className="absolute right-2 bottom-2 px-2 rounded text-sm font-semibold" style=${{background:'rgba(0,0,0,.6)',color:'#fff'}}>🔍 Увеличи</span></button>`:html`<div className="mt-2 text-sm">Зареждане на снимката…</div>`}
+function Login(){const [err,setErr]=useState('');const [b,setB]=useState(false);
+const go=async e=>{const d=e.target.closest('div[data-f]');setB(true);const {error}=await sb.auth.signInWithPassword({email:d.querySelector('[name=em]').value.trim(),password:d.querySelector('[name=pw]').value});setB(false);if(error)setErr('Грешен имейл или парола.')};
+return html`<div className="p-6 max-w-sm mx-auto mt-12"><h1 className="text-3xl mb-4">Монтажи</h1><div data-f className="card p-4 space-y-3"><input name="em" type="email" autoComplete="username" className="inp" placeholder="Имейл"/><input name="pw" type="password" autoComplete="current-password" className="inp" placeholder="Парола"/>${err&&html`<p style=${{color:'var(--bad)'}}>${err}</p>`}<button className="btn pri w-full" disabled=${b} onClick=${go}>Вход</button></div></div>`}
+function App(){
+const [ps,setPsRaw]=useState([]);const tm=React.useRef(0);const [sess,setSess]=useState(undefined),[perm,setPerm]=useState(null),[loading,setLoading]=useState(true),[saveErr,setSaveErr]=useState(false);const ast=true;
+const apply=d=>{const x={projects:structuredClone(d.projects)};const ch=fixIds(x);psR.current=x.projects;setPsRaw(psR.current);if(ch)save();catR.current={...DCAT,...structuredClone(d.catalog||{})};setCatRaw(catR.current)};
+const save=()=>{clearTimeout(tm.current);tm.current=setTimeout(async()=>{const {error}=await sb.from('app_state').update({data:{projects:psR.current,catalog:catR.current,by:CID},updated_at:new Date().toISOString()}).eq('id',1);tm.current=0;setSaveErr(!!error);if(error)tm.current=setTimeout(save,5000)},600)};
+const setPs=fn=>setPsRaw(o=>{const n=fn(o);psR.current=n;save();return n});
+const setCat=fn=>setCatRaw(o=>{const n=fn(o);catR.current=n;save();return n});
+React.useEffect(()=>{sb.auth.getSession().then(({data})=>setSess(data.session));const {data:l}=sb.auth.onAuthStateChange((_e,x)=>setSess(x));return()=>l.subscription.unsubscribe()},[]);
+React.useEffect(()=>{if(!sess)return;let ch;(async()=>{try{const {data:pr}=await sb.from('profiles').select('role').eq('id',sess.user.id).maybeSingle();setPerm({adm:!!pr&&pr.role==='admin'});
+const load=async()=>{const {data:st}=await sb.from('app_state').select('data').eq('id',1).maybeSingle();const d=st&&st.data;if(d&&d.projects&&d.by!==CID&&!tm.current)apply(d)};await load();
+ch=sb.channel('st').on('postgres_changes',{event:'UPDATE',schema:'public',table:'app_state'},load).subscribe()}catch(e){}setLoading(false)})();return()=>{ch&&sb.removeChannel(ch)}},[sess&&sess.user.id]);
+const [pid,setPid]=useState(null);const [tab,setTab]=useState('furn');
+const [filter,setFilter]=useState('act');const [role,setRole]=useState('admin');const [open,setOpen]=useState(null);const [np,setNp]=useState(false);const [ed,setEd]=useState(null);const [showCat,setShowCat]=useState(false);const [cat,setCatRaw]=useState(DCAT);const psR=React.useRef([]),catR=React.useRef(DCAT);const [zoom,setZoom]=useState(null);
+const upd=(fn)=>setPs(o=>{const c=structuredClone(o);fn(c.find(p=>p.id===pid));return c});
+const proj=ps.find(p=>p.id===pid);
+const adm=!!(perm&&perm.adm);
+const head=html`<header className="sticky top-0 z-10 px-4 py-3 flex items-center gap-3" style=${{background:'var(--pri)',color:'var(--onpri)',paddingTop:'calc(env(safe-area-inset-top,0px) + 12px)'}}>
+${proj&&html`<button className="hd text-2xl px-2" aria-label="Назад" onClick=${()=>{setPid(null);setOpen(null)}}>‹</button>`}
+<h1 className="text-xl flex-1 truncate">${proj?proj.name:'Монтажи'}</h1>
+${saveErr&&html`<span className="text-sm font-semibold">⚠ Няма връзка</span>`}
+${adm&&!proj&&html`<button className="chip" style=${{minHeight:36,background:'transparent',color:'inherit',borderColor:'currentColor'}} onClick=${()=>setShowCat(true)}>⚙ Каталог</button>`}
+<span className="text-sm font-semibold">${adm?'Админ':'Майстор'}</span><button className="chip" style=${{minHeight:36,background:'transparent',color:'inherit',borderColor:'currentColor'}} onClick=${()=>sb.auth.signOut()}>Изход</button></header>`;
+if(sess===undefined||(sess&&loading))return html`<div className="p-6">Зареждане…</div>`;
+if(!sess)return html`<${Login}/>`;
+if(showCat&&adm)return html`<${CatScreen} cat=${cat} setCat=${setCat} onBack=${()=>setShowCat(false)}/>`;
+
+if(!proj){
+const list=ps.filter(p=>filter==='cal'?false:filter==='act'?p.status<4:p.status===4).sort((a,b)=>a.date.localeCompare(b.date));
+const soon=ps.filter(p=>p.status<4&&days(p.date)<=7);
+const ev=ps.flatMap(p=>[...(p.days||[]).map(d=>({date:d.date,p,t:d.note||'Екипът е бил на обекта',v:1})),...(p.status<4?[{date:p.date,p,t:'Планиран монтаж'}]:[])]).filter(e=>days(e.date)>=-14).sort((a,b)=>a.date.localeCompare(b.date));
+const cal=filter==='cal'&&html`<div className="space-y-2">${ev.length===0&&html`<p>Няма записи за последните 14 дни и напред.</p>`}${ev.map((e,i)=>html`<button key=${i} className="card p-3 w-full text-left block" onClick=${()=>{setPid(e.p.id);setTab('furn')}}><div className="flex justify-between gap-2"><b>${e.p.name}</b><span className="text-sm font-semibold whitespace-nowrap" style=${{color:e.v?'var(--ok)':'var(--pri)'}}>${fmt(e.date)}</span></div><div className="text-sm" style=${{color:'var(--mut)'}}>${e.v?'✔ Екипът е бил: ':'📅 '}${e.t}</div></button>`)}</div>`;
+const addP=e=>{const f=e.target.closest('div[data-f]');const g=k=>f.querySelector('[name='+k+']').value;if(!g('name'))return;
+const v={name:g('name'),phone:g('phone'),addr:g('addr'),date:g('date')||'2026-10-30'};const id=nid();setPs(o=>[...o,{id,...v,status:0,notes:'',rooms:[],furn:[]}]);setNp(false)};
+return html`<div>${head}<main className="p-4 max-w-2xl mx-auto space-y-4">
+${soon.length>0&&html`<div className="card p-4" style=${{borderLeft:'6px solid var(--acc)'}}><h2 className="text-lg">Монтаж през следващите 7 дни</h2>
+${soon.map(p=>html`<button key=${p.id} className="block w-full text-left py-2" onClick=${()=>{setPid(p.id);setTab('furn')}}><b>${p.name}</b> – ${fmt(p.date)}, след ${days(p.date)} дни</button>`)}</div>`}
+<div className="flex gap-2">${[['act','Активни'],['done','Завършени'],['cal','Календар']].map(([k,t])=>html`<button key=${k} className=${'chip flex-1 '+(filter===k?'on':'')} onClick=${()=>setFilter(k)}>${t}</button>`)}</div>
+${cal}${list.length===0&&filter!=='cal'&&html`<p style=${{color:'var(--mut)'}}>Няма обекти в този раздел.</p>`}
+${list.map(p=>{const fs=p.furn;const pr=fs.length?Math.round(fs.reduce((s,f)=>s+fs2(f),0)/fs.length*100/4):0;
+return html`<button key=${p.id} className="card p-4 w-full text-left block" onClick=${()=>{setPid(p.id);setTab('furn')}}>
+<div className="flex justify-between gap-2"><h2 className="text-lg">${p.name}</h2><span className="text-sm whitespace-nowrap font-semibold" style=${{color:days(p.date)<=7&&p.status<4?'var(--bad)':'var(--mut)'}}>${fmt(p.date)}</span></div>
+<div className="text-sm mb-2" style=${{color:'var(--mut)'}}>${p.addr}</div>
+<div className="flex justify-between text-sm mb-1"><span className="font-semibold">${PS[p.status]}</span><span>${fs.length} мебели · ${pr}% монтирани/подготвени</span></div><${Bar} v=${pr}/></button>`})}
+${adm&&!np&&html`<button className="btn pri w-full" onClick=${()=>setNp(true)}>+ Нов обект</button>`}
+${np&&html`<div data-f className="card p-4 space-y-2"><h3 className="text-lg">Нов обект</h3>
+<input name="name" className="inp" placeholder="Име на обект / клиент"/><input name="phone" className="inp" placeholder="Телефон"/><input name="addr" className="inp" placeholder="Адрес"/><input name="date" type="date" className="inp"/>
+<div className="flex gap-2"><button className="btn pri flex-1" onClick=${addP}>Запази обекта</button><button className="btn" onClick=${()=>setNp(false)}>Откажи</button></div></div>`}
+</main></div>`}
+
+// project view
+const allF=proj.furn;
+const setF=(fid,fn)=>upd(p=>fn(p.furn.find(f=>f.id===fid)));
+const roomOf=r=>allF.filter(f=>f.room===r.id);
+const loadTotal=allF.length+allF.reduce((s,f)=>s+f.hw.length,0);
+const loadDone=allF.filter(f=>f.fs>=3).length+allF.reduce((s,f)=>s+f.hw.filter(h=>h.loaded).length,0);
+const addFurn=(rid,e)=>{const name=pv(e,'fn');if(!name)return;const id=nid();upd(p=>p.furn.push({id,room:rid,name,fs:0,parts:[],hw:[]}));clr(e);setOpen(id)};
+const addRoom=e=>{const name=pv(e,'rm');if(!name)return;const id=nid();upd(p=>p.rooms.push({id,name}));clr(e)};
+const addPart=(f,e)=>{const g=k=>gv(e,k);const name=pv(e,'n');if(!name)return;const part={id:nid(),name,l:+g('l')||0,w:+g('w')||0,unit:g('u'),mat:g('mt'),color:pv(e,'c'),st:'wait'};setF(f.id,x=>x.parts.push(part));clr(e)};
+const addHw=(f,e)=>{const name=pv(e,'hn');if(!name)return;const item=H(name,+gv(e,'hq')||1);setF(f.id,x=>x.hw.push(item));clr(e)};
+const cyc=st=>st==='wait'?'ok':st==='ok'?'bad':'wait';
+
+const inl=(id,ch)=>html`<div data-f key=${id} className="p-3 rounded-lg space-y-2 my-2" style=${{background:'var(--bg)'}}>${ch}</div>`;
+const gv=(e,k)=>e.target.closest('div[data-f]').querySelector('[name='+k+']').value;
+const pv=(e,k)=>{const x=gv(e,k+'_x').trim();return x||gv(e,k)};
+const clr=e=>e.target.closest('div[data-f]').querySelectorAll('input,select').forEach(x=>{if(x.name!=='u')x.value=''});
+const editPart=(f,p)=>inl(p.id,html`<input name="n" defaultValue=${p.name} className="inp"/><select name="mt" defaultValue=${p.mat||''} className="inp"><option value="">Материал</option>${cat.mats.map(x=>html`<option key=${x}>${x}</option>`)}</select>
+<div className="flex gap-2"><input name="l" type="number" defaultValue=${p.l} className="inp"/><input name="w" type="number" defaultValue=${p.w} className="inp"/><select name="u" defaultValue=${p.unit} className="inp" style=${{width:90}}><option>мм</option><option>см</option></select></div>
+<input name="c" defaultValue=${p.color} className="inp"/>
+<div className="flex gap-2"><button className="btn pri flex-1" onClick=${e=>{const v={name:gv(e,'n').trim()||p.name,l:+gv(e,'l')||0,w:+gv(e,'w')||0,unit:gv(e,'u'),mat:gv(e,'mt'),color:gv(e,'c')};setF(f.id,x=>Object.assign(x.parts.find(y=>y.id===p.id),v));setEd(null)}}>Запази</button><button className="btn" onClick=${()=>setEd(null)}>Откажи</button></div>`);
+const editHw=(f,h)=>inl(h.id,html`<div className="flex gap-2"><input name="hn" defaultValue=${h.name} className="inp"/><input name="hq" type="number" defaultValue=${h.qty} className="inp" style=${{width:80}}/></div>
+<div className="flex gap-2"><button className="btn pri flex-1" onClick=${e=>{const v={name:gv(e,'hn').trim()||h.name,qty:+gv(e,'hq')||1};setF(f.id,x=>Object.assign(x.hw.find(y=>y.id===h.id),v));setEd(null)}}>Запази</button><button className="btn" onClick=${()=>setEd(null)}>Откажи</button></div>`);
+const saveProj=e=>{const v={name:gv(e,'name').trim()||proj.name,phone:gv(e,'phone'),addr:gv(e,'addr'),date:gv(e,'date')||proj.date,notes:gv(e,'notes')};upd(p=>Object.assign(p,v));setEd(null)};
+const addNote=async e=>{const d=e.target.closest('div[data-f]');const t=gv(e,'nt').trim();if(!t)return;const n={id:nid(),text:t,by:adm?'Админ':'Майстор',date:new Date().toISOString().slice(0,10),furn:+gv(e,'fu'),kind:gv(e,'k'),done:false};const fl=d.querySelector('[name=ph]');const file=fl&&fl.files[0];d.querySelector('textarea').value='';if(file){try{const path=crypto.randomUUID()+'.jpg';const {error}=await sb.storage.from('photos').upload(path,await shrink(file),{contentType:'image/jpeg'});if(error)throw error;n.photo=path}catch(x){n.text+=' (снимката не се качи)'}}upd(p=>{p.log=[n,...(p.log||[])]});if(fl)fl.value=''};
+const openN=(proj.log||[]).filter(n=>!n.done).length;
+const addDay=e=>{const v={id:nid(),date:gv(e,'dd')||new Date().toISOString().slice(0,10),note:gv(e,'dn').trim()};upd(p=>{p.days=[...(p.days||[]),v]})};
+const crewBox=html`<div><div className="text-sm font-semibold">Посещения на екипа (${(proj.days||[]).length})</div>
+${[...(proj.days||[])].sort((a,b)=>b.date.localeCompare(a.date)).map(d=>html`<div key=${d.id} className="flex items-center justify-between gap-2 py-1 text-sm"><span><b>${fmt(d.date)}</b> – ${d.note||'без описание'}</span>${adm&&html`<button aria-label="Изтрий" className="px-2 text-xl" onClick=${()=>upd(p=>{p.days=p.days.filter(y=>y.id!==d.id)})}>×</button>`}</div>`)}
+<div data-f className="flex gap-2 mt-1"><input name="dd" type="date" defaultValue=${new Date().toISOString().slice(0,10)} className="inp" style=${{width:150}}/><input name="dn" className="inp" placeholder="Какво е свършено днес"/><button className="btn pri" onClick=${addDay}>+ Ден</button></div></div>`;
+const addTpl=e=>{const t=TPL[gv(e,'tt')];const [a,b,c]=[0,1,2].map(i=>+gv(e,'d'+i)||t.d[i]);const r=t.b(a,b,c);const id=nid();const name=gv(e,'tn').trim()||(gv(e,'tt')+' '+a/10+' см');const rid=+gv(e,'tr');
+upd(p=>p.furn.push({id,room:rid,name,fs:0,parts:r.parts.map(([n,l,w])=>({id:nid(),name:n,l:Math.round(l),w:Math.round(w),unit:'мм',mat:gv(e,'tm'),color:'',st:'wait'})),hw:r.hw.map(([n,q])=>H(n,q))}));setOpen(id)};
+const tplBox=proj.rooms.length?html`<div data-f className="card p-3 space-y-2"><h3 className="text-lg">Мебел от шаблон</h3>
+<div className="flex gap-2"><select name="tr" className="inp">${proj.rooms.map(r=>html`<option key=${r.id} value=${r.id}>${r.name}</option>`)}</select><select name="tt" className="inp">${Object.keys(TPL).map(k=>html`<option key=${k}>${k}</option>`)}</select></div>
+<input name="tn" className="inp" placeholder="Име (по желание)"/><select name="tm" className="inp"><option value="">Материал на детайлите</option>${cat.mats.map(x=>html`<option key=${x}>${x}</option>`)}</select>
+<div className="flex gap-2">${['Ширина','Височина','Дълбочина'].map((l,i)=>html`<input key=${i} name=${'d'+i} type="number" inputMode="numeric" className="inp" placeholder=${l+' мм'}/>`)}</div>
+<p className="text-xs" style=${{color:'var(--mut)'}}>Празните размери се взимат от стандартния шаблон. Размерите на детайлите са приблизителни (18 мм ПДЧ) – провери ги с ✎.</p>
+<button className="btn pri w-full" onClick=${addTpl}>+ Добави от шаблон</button></div>`:null;
+const bad=allF.flatMap(f=>f.parts.filter(p=>p.st==='bad').map(p=>({f,p})));
+const rn=id=>(proj.rooms.find(r=>r.id===id)||{name:''}).name;
+const orderTxt='Поръчка за дефектни/липсващи детайли\nОбект: '+proj.name+'\n\n'+(bad.length?bad.map(({f,p})=>'- '+rn(f.room)+' / '+f.name+': '+p.name+' '+dim(p)+', '+(p.mat?p.mat+', ':'')+(p.color||'без цвят')).join('\n'):'Няма дефектни или липсващи детайли.');
+const orderBox=html`<div className="card p-4 space-y-2"><div className="flex justify-between"><h2 className="text-lg">Поръчка към цеха</h2><b>${bad.length} детайла</b></div>
+<textarea readOnly value=${orderTxt} rows="8" className="inp py-2"></textarea>
+<div className="flex gap-2"><button className="btn pri flex-1" onClick=${e=>{const b=e.target;(navigator.clipboard?navigator.clipboard.writeText(orderTxt):Promise.reject()).then(()=>{b.textContent='Копирано ✓'}).catch(()=>{b.textContent='Копирай ръчно от текста'})}}>Копирай</button>
+<a className="btn flex-1 flex items-center justify-center" href=${'mailto:?subject='+encodeURIComponent('Поръчка – '+proj.name)+'&body='+encodeURIComponent(orderTxt)}>Имейл</a></div>
+<p className="text-xs" style=${{color:'var(--mut)'}}>Списъкът се пълни от детайлите с ✕. Щом детайлът пристигне и го отбележиш с ✓, излиза от поръчката.</p></div>`;
+const furnCard=f=>{const o=open===f.id||open==='all';const v=fp(f);return html`<div key=${f.id} className="card overflow-hidden">
+<button className="w-full text-left p-3 block" onClick=${()=>setOpen(o?null:f.id)}>
+<div className="flex justify-between gap-2"><b>${f.name}</b><span className="text-sm whitespace-nowrap" style=${{color:'var(--mut)'}}>${o?'▲':'▼'}</span></div>
+<div className="text-sm my-1 font-semibold" style=${{color:f.fs>=4?'var(--ok)':'var(--pri)'}}>${FS[f.fs]}</div><${Bar} v=${v}/></button>
+${o&&html`<div className="p-3 pt-0 space-y-4">
+${ed==='f'+f.id?html`<div data-f className="flex gap-2"><input name="fn" defaultValue=${f.name} className="inp"/><button className="btn pri" onClick=${e=>{const v=gv(e,'fn').trim();if(v)setF(f.id,x=>{x.name=v});setEd(null)}}>Запази</button></div>`:html`<div className="flex gap-2"><button className="btn flex-1" onClick=${()=>setEd('f'+f.id)}>✎ Промени името</button>${adm&&(ed==='d'+f.id?html`<button className="btn" style=${{color:'var(--bad)'}} onClick=${()=>{upd(p=>{p.furn=p.furn.filter(y=>y.id!==f.id)});setOpen(null);setEd(null)}}>Потвърди изтриване</button>`:html`<button className="btn" onClick=${()=>setEd('d'+f.id)}>Изтрий</button>`)}</div>`}
+<div className="flex gap-2 overflow-x-auto pb-1">${FS.map((s,i)=>html`<button key=${i} className=${'chip '+(f.fs===i?'on':'')} onClick=${()=>setF(f.id,x=>{x.fs=i;if(i===4)x.hw.forEach(h=>h.loaded=true)})}>${s}</button>`)}</div>
+<div><h3 className="text-lg mb-1">Детайли (${f.parts.filter(p=>p.st==='ok').length}/${f.parts.length})</h3>
+${f.parts.length===0&&html`<p className="text-sm" style=${{color:'var(--mut)'}}>Още няма добавени детайли.</p>`}
+${f.parts.map(p=>ed==='p'+p.id?editPart(f,p):html`<div key=${p.id} className="flex items-center gap-3 py-2" style=${{borderTop:'1px solid var(--line)'}}>
+<button aria-label="Смени статус" className=${'ck '+(p.st==='ok'?'on':p.st==='bad'?'bad':'')} onClick=${()=>setF(f.id,x=>{const q=x.parts.find(y=>y.id===p.id);q.st=cyc(q.st)})}>${p.st==='ok'?'✓':p.st==='bad'?'✕':''}</button>
+<div className="flex-1 min-w-0"><div className="font-semibold">${p.name}</div><div className="text-sm" style=${{color:'var(--mut)'}}>${dim(p)} · ${[p.mat,p.color].filter(Boolean).join(' · ')||'без материал'}</div>
+${p.st==='bad'&&html`<div className="text-sm font-semibold" style=${{color:'var(--bad)'}}>Дефектен / липсващ – да се поръча от цеха</div>`}</div>
+<button aria-label="Редактирай" className="px-2 text-xl" onClick=${()=>setEd('p'+p.id)}>✎</button>
+${adm&&html`<button aria-label="Изтрий" className="px-2 text-xl" style=${{color:'var(--mut)'}} onClick=${()=>setF(f.id,x=>{x.parts=x.parts.filter(y=>y.id!==p.id)})}>×</button>`}</div>`)}
+<p className="text-xs" style=${{color:'var(--mut)'}}>Натисни квадратчето: ✓ пристигнал · ✕ дефектен/липсващ · празно – чака.</p>
+<div data-f className="mt-2 p-3 rounded-lg space-y-2" style=${{background:'var(--bg)'}}><b>Добави детайл</b>
+<${Pick} name="n" list=${cat.parts} ph="Избери детайл"/>
+<div className="flex gap-2"><input name="l" type="number" inputMode="numeric" className="inp" placeholder="Дължина"/><input name="w" type="number" inputMode="numeric" className="inp" placeholder="Ширина"/>
+<select name="u" className="inp" style=${{width:90}}><option>мм</option><option>см</option></select></div>
+<select name="mt" className="inp"><option value="">Материал</option>${cat.mats.map(x=>html`<option key=${x}>${x}</option>`)}</select><${Pick} name="c" list=${cat.colors} ph="Цвят / кант"/><button className="btn pri w-full" onClick=${e=>addPart(f,e)}>+ Добави детайл</button></div></div>
+<div><h3 className="text-lg mb-1">Обков и консумативи (${f.hw.filter(h=>h.done).length}/${f.hw.length})</h3>
+${f.hw.map(h=>ed==='h'+h.id?editHw(f,h):html`<div key=${h.id} className="flex items-center gap-3 py-2" style=${{borderTop:'1px solid var(--line)'}}>
+<${Ck} on=${h.done} label="Подготвен" f=${()=>setF(f.id,x=>{const q=x.hw.find(y=>y.id===h.id);q.done=!q.done})}/>
+<div className="flex-1"><div className="font-semibold">${h.name}</div></div><b className="hd text-lg">${h.qty} бр.</b>
+<button aria-label="Редактирай" className="px-2 text-xl" onClick=${()=>setEd('h'+h.id)}>✎</button>
+${adm&&html`<button aria-label="Изтрий" className="px-2 text-xl" style=${{color:'var(--mut)'}} onClick=${()=>setF(f.id,x=>{x.hw=x.hw.filter(y=>y.id!==h.id)})}>×</button>`}</div>`)}
+<div data-f className="mt-2 p-3 rounded-lg space-y-2" style=${{background:'var(--bg)'}}><b>Добави обков</b>
+<${Pick} name="hn" list=${cat.hw} ph="Избери обков"/><input name="hq" type="number" inputMode="numeric" className="inp" placeholder="Брой"/>
+<button className="btn pri w-full" onClick=${e=>addHw(f,e)}>+ Добави обков</button></div></div>
+<button className="btn pri w-full" disabled=${f.fs>=4} onClick=${()=>setF(f.id,x=>{x.fs=Math.min(4,x.fs+1)})}>${f.fs>=4?'Мебелът е монтиран':'Следваща стъпка: '+FS[f.fs+1]}</button>
+</div>`}</div>`};
+
+const pack=html`<div className="space-y-4">
+<div className="card p-4"><div className="flex justify-between mb-1"><h2 className="text-lg">Натоварено в буса</h2><b>${loadDone} / ${loadTotal}</b></div><${Bar} v=${loadTotal?loadDone/loadTotal*100:0}/>
+<p className="text-sm mt-2" style=${{color:'var(--mut)'}}>Мебелите се отмятат само след като са сглобени в цеха. Отбелязването на „Качен в буса“ сменя статуса на мебела.</p></div>
+${proj.rooms.map(r=>{const fs=roomOf(r);if(!fs.length)return null;return html`<div key=${r.id} className="card p-4"><h3 className="text-xl mb-1">${r.name}</h3>
+${fs.map(f=>html`<div key=${f.id} className="flex items-center gap-3 py-2" style=${{borderTop:'1px solid var(--line)'}}>
+<${Ck} on=${f.fs>=3} dis=${f.fs<2} label=${'Натоварен: '+f.name} f=${()=>setF(f.id,x=>{x.fs=x.fs>=3?2:3})}/>
+<div className="flex-1"><div className="font-semibold">${f.name}</div><div className="text-sm" style=${{color:f.fs<2?'var(--bad)':'var(--mut)'}}>${f.fs<2?'Още не е сглобен: '+FS[f.fs]:FS[f.fs]}</div></div></div>`)}
+<div className="mt-2 p-3 rounded-lg" style=${{background:'var(--bg)'}}><b>Кутия с обков и консумативи – ${r.name}</b>
+${fs.flatMap(f=>f.hw.map(h=>({f,h}))).map(({f,h})=>html`<div key=${h.id} className="flex items-center gap-3 py-2">
+<${Ck} on=${h.loaded} label=${'Натоварен: '+h.name} f=${()=>setF(f.id,x=>{const q=x.hw.find(y=>y.id===h.id);q.loaded=!q.loaded})}/>
+<div className="flex-1"><div>${h.name} <b>× ${h.qty}</b></div><div className="text-xs" style=${{color:'var(--mut)'}}>${f.name}${h.done?'':' · още не е подготвен'}</div></div></div>`)}</div></div>`})}
+</div>`;
+
+const notesTab=(()=>{const sorted=[...(proj.log||[])].sort((a,b)=>a.done-b.done);
+return html`<div className="space-y-3">
+<div data-f className="card p-3 space-y-2"><h3 className="text-lg">Нова забележка</h3>
+<div className="flex gap-2"><select name="k" className="inp">${KINDS.map(k=>html`<option key=${k}>${k}</option>`)}</select>
+<select name="fu" className="inp"><option value="0">Общо за обекта</option>${allF.map(f=>html`<option key=${f.id} value=${f.id}>${f.name}</option>`)}</select></div>
+<textarea name="nt" className="inp py-2" rows="3" placeholder="Опиши какво е забелязано…"></textarea>
+${ast&&html`<input name="ph" type="file" accept="image/*" className="inp py-2"/>`}<button className="btn pri w-full" onClick=${addNote}>+ Запази забележката</button></div>
+${sorted.length===0&&html`<p style=${{color:'var(--mut)'}}>Още няма забележки. Добави първата отгоре.</p>`}
+${sorted.map(n=>html`<div key=${n.id} className="card p-3 flex gap-3 items-start" style=${{opacity:n.done?0.6:1,borderLeft:n.kind==='Проблем'&&!n.done?'6px solid var(--bad)':undefined}}>
+<${Ck} on=${n.done} label="Решена" f=${()=>upd(p=>{const q=p.log.find(y=>y.id===n.id);q.done=!q.done})}/>
+<div className="flex-1 min-w-0"><div className="text-sm font-semibold">${n.kind}${n.furn?' · '+(allF.find(f=>f.id===n.furn)||{name:'изтрит мебел'}).name:''}</div>
+<div className="whitespace-pre-wrap">${n.text}</div>${n.photo&&html`<${Photo} path=${n.photo} open=${setZoom}/>`}<div className="text-xs" style=${{color:'var(--mut)'}}>${n.by} · ${fmt(n.date)}${n.done?' · решена':''}</div></div>
+${adm&&html`<button aria-label="Изтрий" className="px-2 text-xl" style=${{color:'var(--mut)'}} onClick=${()=>upd(p=>{p.log=p.log.filter(y=>y.id!==n.id)})}>×</button>`}</div>`)}</div>`})();
+const furnTab=html`<div className="space-y-4">${proj.rooms.map(r=>html`<section key=${r.id}><h2 className="text-xl mb-2">${r.name}</h2>
+<div className="space-y-2">${roomOf(r).map(furnCard)}</div>
+<div data-f className="space-y-2 mt-2"><${Pick} name="fn" list=${cat.furn} ph=${'Избери мебел за „'+r.name+'“'}/><button className="btn pri w-full" onClick=${e=>addFurn(r.id,e)}>+ Добави мебел</button></div></section>`)}
+<div data-f className="card p-3 space-y-2"><${Pick} name="rm" list=${cat.rooms} ph="Избери стая"/><button className="btn pri w-full" onClick=${addRoom}>+ Добави стая</button></div>${tplBox}</div>`;
+
+return html`<div>${head}<main className="p-4 max-w-2xl mx-auto space-y-4">
+<div className="card p-4 space-y-2"><div className="flex flex-wrap gap-x-4 gap-y-1"><span>📅 <b>${fmt(proj.date)}</b> (${days(proj.date)>=0?'след '+days(proj.date)+' дни':'минал'})</span></div>
+<a className="block font-semibold underline" style=${{color:'var(--pri)'}} href=${'tel:'+proj.phone.replace(/\s/g,'')}>📞 ${proj.phone}</a><div>📍 ${proj.addr}</div>
+${proj.notes&&html`<div className="p-3 rounded-lg text-sm" style=${{background:'var(--bg)',borderLeft:'5px solid var(--acc)'}}>${proj.notes}</div>`}
+${crewBox}
+${adm&&(ed==='proj'?html`<div data-f className="space-y-2"><input name="name" defaultValue=${proj.name} className="inp"/><input name="phone" defaultValue=${proj.phone} className="inp"/><input name="addr" defaultValue=${proj.addr} className="inp"/><input name="date" type="date" defaultValue=${proj.date} className="inp"/><textarea name="notes" defaultValue=${proj.notes} className="inp py-2" rows="3" placeholder="Бележки за обекта"></textarea><div className="flex gap-2"><button className="btn pri flex-1" onClick=${saveProj}>Запази</button><button className="btn" onClick=${()=>setEd(null)}>Откажи</button></div></div>`:html`<button className="btn w-full" onClick=${()=>setEd('proj')}>✎ Редактирай данните за обекта</button>`)}
+<div className="text-sm font-semibold pt-1">Статус на обекта</div>
+<div className="flex gap-2 overflow-x-auto pb-1">${PS.map((s,i)=>html`<button key=${i} className=${'chip '+(proj.status===i?'on':'')} onClick=${()=>upd(p=>{p.status=i})}>${s}</button>`)}</div></div>
+<div className="flex gap-2 noprint">${[['furn','Мебели'],['pack','Чеклист'],['ord','Поръчка'+(bad.length?' ('+bad.length+')':'')],['notes','Забележки'+(openN?' ('+openN+')':'')]].map(([k,t])=>html`<button key=${k} className=${'btn flex-1 px-1 text-sm '+(tab===k?'pri':'')} onClick=${()=>setTab(k)}>${t}</button>`)}</div>
+${tab==='furn'?furnTab:tab==='pack'?pack:tab==='ord'?orderBox:notesTab}
+<button className="btn w-full noprint" onClick=${()=>{if(tab==='furn')setOpen('all');setTimeout(()=>window.print(),300)}}>🖨 Печат / PDF</button></main>
+${zoom&&html`<${Lightbox} src=${zoom} onClose=${()=>setZoom(null)}/>`}</div>`;
+}
+function fs2(f){return f.fs}
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+</script>
+</body>
+</html>
