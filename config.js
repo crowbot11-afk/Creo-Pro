@@ -1,3 +1,3 @@
 // Залепи данните от Supabase (Project Settings -> API). Запази кавичките.
 const SUPABASE_URL='PASTE_PROJECT_URL';
-const SUPABASE_KEY='PASTE_ANON_PUBLIC_KEY';
+const SUPABASE_KEY='.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6aHd3d3drdHNtdmhicml0aGN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA2ODI2ODQsImV4cCI6MjEwNjI1ODY4NH0.j66pJThOy6FVkuPI6sZUKrHODO3P2_fRN7qmCSqirno';
